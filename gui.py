@@ -177,7 +177,7 @@ class PerformansYonetimApp:
         sol_panel.columnconfigure(0, weight=1)
         sol_panel.rowconfigure(0, weight=1)
         # Sol paneli ana alana ekle, başlangıç ağırlığı 3 (daha geniş)
-        ana_alan.add(sol_panel, weight=3)
+        ana_alan.add(sol_panel)
 
         tree_scrollbar_y = Scrollbar(sol_panel, orient=tk.VERTICAL)
         tree_scrollbar_x = Scrollbar(sol_panel, orient=tk.HORIZONTAL)
@@ -201,7 +201,7 @@ class PerformansYonetimApp:
         self.edit_frame = ttk.Frame(ana_alan, padding=10)
         self.edit_frame.columnconfigure(1, weight=1) # Entry'ler için
         # Sağ paneli ana alana ekle, başlangıç ağırlığı 2 (daha dar)
-        ana_alan.add(self.edit_frame, weight=2)
+        ana_alan.add(self.edit_frame)
 
         # --- Sağ Panel İçeriği ---
         ttk.Label(self.edit_frame, text="Seçili Öğrenci Bilgileri", font=("Arial", 12, "bold")).grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky="w")
