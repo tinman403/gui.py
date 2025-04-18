@@ -1,0 +1,104 @@
+# modules/veri_isleme.py
+import pandas as pd
+from openpyxl import load_workbook
+import json
+import os
+
+# --------------------------
+# Ayar Dosyaları
+# --------------------------
+
+AYARLAR_DOSYASI = "ayarlar.json"
+
+def load_settings() -> dict:
+    """ayarlar.json dosyasını yükler."""
+    if not os.path.exists(AYARLAR_DOSYASI):
+        return {}
+    with open(AYARLAR_DOSYASI, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_settings(ayarlar: dict) -> bool:
+    """ayarlar.json dosyasını kaydeder."""
+    try:
+        with open(AYARLAR_DOSYASI, "w", encoding="utf-8") as f:
+            json.dump(ayarlar, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        print(f"Ayarlar kaydedilemedi: {e}")
+        return False
+
+# --------------------------
+# Excel'den Veri Yükleme
+# --------------------------
+
+def veri_yukle_excel(dosya_yolu: str, satir_atla: int = 15) -> tuple[pd.DataFrame, str]:
+    """
+    Excel dosyasını okur, başlığa kadar satır atlar, veriyi temizler, ortalama ve sonucu hesaplar.
+    """
+    try:
+        df = pd.read_excel(dosya_yolu, skiprows=satir_atla)
+        df = df.rename(columns=lambda x: str(x).strip())
+
+        df = temizle(df)
+        df = ortalama_ve_sonuc(df)
+
+        # Sınıf adını sayfa adından çıkar
+        sinif_adi = try_get_sheetname(dosya_yolu)
+
+        return df, sinif_adi
+
+    except Exception as e:
+        print(f"[veri_yukle_excel] Hata: {e}")
+        return None, None
+
+def try_get_sheetname(path: str) -> str:
+    try:
+        wb = load_workbook(path, read_only=True)
+        return wb.sheetnames[0]
+    except:
+        return "Bilinmeyen Sınıf"
+
+# --------------------------
+# Veri Temizleme ve Hesaplama
+# --------------------------
+
+def temizle(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    'G', '-', '', NaN gibi girişleri 0'a çevirir ve not sütunlarını int yapar.
+    """
+    temiz_df = df.copy()
+    not_sutunlari = ["Sınav 1", "Sınav 2", "Performans 1", "Performans 2", "Proje"]
+    for col in not_sutunlari:
+        if col in temiz_df.columns:
+            temiz_df[col] = temiz_df[col].replace(["G", "-", "", None], 0).fillna(0)
+            temiz_df[col] = temiz_df[col].astype(int)
+    return temiz_df
+
+def ortalama_ve_sonuc(df: pd.DataFrame, basari_siniri: int = 50) -> pd.DataFrame:
+    """
+    Ortalama ve Sonuç sütunlarını hesaplar.
+    """
+    ilgili = ["Sınav 1", "Sınav 2", "Performans 1", "Performans 2", "Proje"]
+    mevcut = [col for col in ilgili if col in df.columns]
+    df["Ortalama"] = df[mevcut].mean(axis=1)
+    df["Sonuç"] = df["Ortalama"].apply(lambda x: "Başarılı" if x >= basari_siniri else "Başarısız")
+    return df
+
+# --------------------------
+# Sınıf Bazlı Raporlama
+# --------------------------
+
+def sinif_basarisi(df: pd.DataFrame, sinif_adi: str) -> dict:
+    """
+    Başarılı / Başarısız oranlarını verir.
+    """
+    toplam = len(df)
+    basarili = len(df[df["Sonuç"] == "Başarılı"])
+    oran = round((basarili / toplam) * 100, 2) if toplam else 0.0
+
+    return {
+        "Sınıf": sinif_adi,
+        "Toplam Öğrenci": toplam,
+        "Başarılı": basarili,
+        "Başarı Oranı (%)": oran
+    }
